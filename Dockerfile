@@ -1,6 +1,6 @@
 FROM python:3.11-slim
 
-# Install system dependencies including ffmpeg and yt-dlp binary
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     ffmpeg \
     git \
@@ -11,9 +11,9 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# Copy requirements and install
+# Copy requirements and install with minimal pip usage
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --only-binary :all: fastapi uvicorn pydantic
 
 # Copy app files
 COPY index.html .
