@@ -11,9 +11,11 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# Copy requirements and install with minimal pip usage
-COPY requirements.txt .
-RUN pip install --no-cache-dir --only-binary :all: fastapi uvicorn pydantic
+# Install Python packages directly without requirements.txt
+RUN pip install --no-cache-dir --only-binary :all: \
+    fastapi==0.104.1 \
+    uvicorn==0.24.0 \
+    pydantic==2.5.0
 
 # Copy app files
 COPY index.html .
