@@ -15,9 +15,6 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
-# Serve static files
-app.mount("/", StaticFiles(directory=".", html=True), name="static")
-
 DOWNLOAD_DIR = Path(tempfile.gettempdir()) / "yt_downloads"
 DOWNLOAD_DIR.mkdir(exist_ok=True)
 
@@ -167,6 +164,9 @@ async def get_file(filename: str):
     except Exception as e:
         logger.error(f"Error serving file: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
+
+# Serve static files AFTER API routes so they don't intercept
+app.mount("/", StaticFiles(directory=".", html=True), name="static")
 
 if __name__ == "__main__":
     import uvicorn
