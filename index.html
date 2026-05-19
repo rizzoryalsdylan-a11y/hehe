@@ -212,7 +212,7 @@
 <body>
     <div class="container">
         <header>
-            <h1>&#9654; YouTube Downloader</h1>
+            <h1>▶ YouTube Downloader</h1>
             <p>Paste a YouTube URL to download video or audio</p>
         </header>
  
@@ -242,7 +242,7 @@
         </div>
  
         <footer>
-            Powered by yt-dlp &bull; For personal use only
+            Powered by yt-dlp • For personal use only
         </footer>
     </div>
  
@@ -255,6 +255,17 @@
         const statusBox = document.getElementById('statusBox');
         const videoCard = document.getElementById('videoCard');
         const downloadBtn = document.getElementById('downloadBtn');
+ 
+        // Check for URL parameter on page load
+        window.addEventListener('load', () => {
+            const params = new URLSearchParams(window.location.search);
+            const urlParam = params.get('url');
+            if (urlParam) {
+                urlInput.value = urlParam;
+                // Auto-fetch if URL provided
+                setTimeout(() => fetchInfo(), 500);
+            }
+        });
  
         urlInput.addEventListener('keydown', e => {
             if (e.key === 'Enter') fetchInfo();
@@ -335,7 +346,7 @@
                 div.className = 'format-option';
                 div.innerHTML = `
                     <div class="label">${f.label}</div>
-                    <div class="size">${formatSize(f.filesize) || (f.type === 'audio' ? '&#127925;' : '&#128249;')}</div>
+                    <div class="size">${formatSize(f.filesize) || (f.type === 'audio' ? '🎵' : '📹')}</div>
                 `;
                 div.addEventListener('click', () => {
                     document.querySelectorAll('.format-option').forEach(el => el.classList.remove('selected'));
