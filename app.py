@@ -19,7 +19,7 @@ app = FastAPI()
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -27,6 +27,18 @@ app.add_middleware(
 
 DOWNLOAD_DIR = Path(tempfile.gettempdir()) / "yt_downloads"
 DOWNLOAD_DIR.mkdir(exist_ok=True)
+
+# Try to find cookies file
+COOKIES_FILE = None
+for cookies_path in [
+    Path.home() / ".config/yt-dlp/cookies.txt",
+    Path.home() / ".local/share/yt-dlp/cookies.txt",
+    "/tmp/cookies.txt"
+]:
+    if cookies_path.exists():
+        COOKIES_FILE = str(cookies_path)
+        logger.info(f"Found cookies file: {COOKIES_FILE}")
+        break
 
 class InfoRequest(BaseModel):
     url: str
@@ -38,8 +50,14 @@ class DownloadRequest(BaseModel):
 def run_yt_dlp(args: list, timeout: int = 300) -> dict:
     """Run yt-dlp command and return result"""
     try:
+        # Add cookies if available
+        cmd = ["yt-dlp"]
+        if COOKIES_FILE:
+            cmd.extend(["--cookies", COOKIES_FILE])
+        cmd.extend(args)
+        
         result = subprocess.run(
-            ["yt-dlp"] + args,
+            cmd,
             capture_output=True,
             text=True,
             timeout=timeout
@@ -55,9 +73,8 @@ def run_yt_dlp(args: list, timeout: int = 300) -> dict:
 
 @app.post("/api/info")
 async def get_info(req: InfoRequest):
-    """Get video info without cookies"""
+    """Get video info"""
     try:
-        # Use yt-dlp to extract info in JSON format
         result = run_yt_dlp([
             "-j",
             "--no-warnings",
@@ -127,12 +144,10 @@ async def get_info(req: InfoRequest):
 
 @app.post("/api/download")
 async def download_video(req: DownloadRequest):
-    """Download video without cookies"""
+    """Download video"""
     try:
-        # Generate output filename
         output_template = str(DOWNLOAD_DIR / "%(title)s.%(ext)s")
         
-        # Use yt-dlp to download
         result = run_yt_dlp([
             "-f", req.format_id,
             "-o", output_template,
@@ -141,7 +156,6 @@ async def download_video(req: DownloadRequest):
             req.url
         ], timeout=600)
         
-        # Find the downloaded file
         files = list(DOWNLOAD_DIR.glob("*"))
         if not files:
             raise Exception("Download completed but file not found")
@@ -175,7 +189,7 @@ async def get_file(filename: str):
         logger.error(f"Error serving file: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
 
-# Serve static files AFTER API routes so they don't intercept
+# Serve static files AFTER API routes
 app.mount("/", StaticFiles(directory=".", html=True), name="static")
 
 if __name__ == "__main__":
