@@ -28,18 +28,6 @@ app.add_middleware(
 DOWNLOAD_DIR = Path(tempfile.gettempdir()) / "yt_downloads"
 DOWNLOAD_DIR.mkdir(exist_ok=True)
 
-# Try to find cookies file
-COOKIES_FILE = None
-for cookies_path in [
-    Path.home() / ".config/yt-dlp/cookies.txt",
-    Path.home() / ".local/share/yt-dlp/cookies.txt",
-    "/tmp/cookies.txt"
-]:
-    if cookies_path.exists():
-        COOKIES_FILE = str(cookies_path)
-        logger.info(f"Found cookies file: {COOKIES_FILE}")
-        break
-
 class InfoRequest(BaseModel):
     url: str
 
@@ -50,17 +38,12 @@ class DownloadRequest(BaseModel):
 def run_yt_dlp(args: list, timeout: int = 300) -> dict:
     """Run yt-dlp command and return result"""
     try:
-        # Add cookies if available
-        cmd = ["yt-dlp"]
-        if COOKIES_FILE:
-            cmd.extend(["--cookies", COOKIES_FILE])
-        cmd.extend(args)
-        
         result = subprocess.run(
-            cmd,
+            ["yt-dlp"] + args,
             capture_output=True,
             text=True,
-            timeout=timeout
+            timeout=timeout,
+            env={**os.environ, "OAUTHLIB_INSECURE_TRANSPORT": "1"}
         )
         if result.returncode != 0:
             raise Exception(result.stderr or "yt-dlp command failed")
@@ -79,6 +62,7 @@ async def get_info(req: InfoRequest):
             "-j",
             "--no-warnings",
             "--socket-timeout", "30",
+            "--extractor-args", "youtube:player_client=web",
             req.url
         ], timeout=60)
         
@@ -153,6 +137,7 @@ async def download_video(req: DownloadRequest):
             "-o", output_template,
             "--no-warnings",
             "--socket-timeout", "30",
+            "--extractor-args", "youtube:player_client=web",
             req.url
         ], timeout=600)
         
